@@ -629,7 +629,11 @@
       card.id = `card-${sub.channelId}`;
       card.onclick = () => {
         if (CONFIG.openInBrowser) {
-          window.open(`https://www.youtube.com/channel/${sub.channelId}`, '_blank');
+          const videoId = sub.latestVideo?.videoId;
+          const url = videoId
+            ? `https://www.youtube.com/watch?v=${videoId}`
+            : `https://www.youtube.com/channel/${sub.channelId}`;
+          window.open(url, '_blank');
         } else {
           showChannel(sub);
         }
