@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>YouTube Channels</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 28 20'><path d='M27.97 3.12c-.32-1.19-1.26-2.13-2.45-2.45C23.33 0 14.34 0 14.34 0S5.36 0 3.17.67C1.98.99 1.04 1.93.72 3.12 0 5.3 0 10 0 10s0 4.7.72 6.88c.32 1.19 1.26 2.13 2.45 2.45C5.36 20 14.34 20 14.34 20s8.99 0 11.18-.67c1.19-.32 2.13-1.26 2.45-2.45C28.65 14.7 28.65 10 28.65 10s0-4.7-.68-6.88z' fill='%23FF0000'/><path d='M11.47 14.28L18.85 10l-7.38-4.28v8.56z' fill='%23FFF'/></svg>">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -442,7 +443,7 @@
   let videoOffset = 0;
   const videosPerPage = 4;
   const prefetchThreshold = 40;
-  let currentSpeed = currentSpeed;
+  let currentSpeed = CONFIG.defaultPlaybackSpeed;
 
   // Set speed dropdown to config default
   document.getElementById('speed-select').value = String(currentSpeed);
@@ -475,9 +476,16 @@
       accessToken = cached;
       validateToken(cached).then(valid => {
         if (valid) onSignedIn();
-        else localStorage.removeItem('yt_access_token');
+        else refreshToken();
       });
     }
+  }
+
+  function refreshToken() {
+    accessToken = null;
+    localStorage.removeItem('yt_access_token');
+    // Silent refresh — prompt: '' avoids consent screen if user previously authorized
+    tokenClient.requestAccessToken({ prompt: '' });
   }
 
   async function validateToken(token) {
@@ -530,8 +538,7 @@
         const r = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
 
         if (r.status === 401) {
-          localStorage.removeItem('yt_access_token');
-          handleSignOut();
+          refreshToken();
           return;
         }
 
