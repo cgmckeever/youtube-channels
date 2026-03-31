@@ -925,7 +925,7 @@
       div.className = 'comment';
       div.innerHTML = `
         <div class="comment-header">
-          <img class="comment-avatar" src="${c.avatar}" alt="">
+          <img class="comment-avatar" src="${c.avatar}" alt="" onerror="this.style.background='#444';this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 28 28%22><circle cx=%2214%22 cy=%2210%22 r=%225%22 fill=%22%23888%22/><ellipse cx=%2214%22 cy=%2224%22 rx=%229%22 ry=%227%22 fill=%22%23888%22/></svg>'">
           <span class="comment-author">${c.author}</span>
           <span class="comment-date">${timeAgo(c.publishedAt)}</span>
         </div>
