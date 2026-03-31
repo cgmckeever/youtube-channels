@@ -7,10 +7,12 @@ A local, single-page YouTube subscription viewer with embedded playback. No back
 - Pulls your YouTube subscriptions automatically via OAuth
 - Alphabetical or most-recent sorting with search/filter
 - Embedded video player with configurable default playback speed
+- Session-level playback speed override via dropdown
 - Floating picture-in-picture player when scrolling
 - Lazy-loaded comments per video
-- Deep-linkable URLs to specific channels and videos
-- Video list caching to minimize API calls
+- Deep-linkable URLs to specific channels and videos — shareable with other users running the app
+- Video list caching with background prefetch to minimize API calls
+- Optional "open in browser" mode to open channels directly on YouTube
 
 ## Prerequisites
 
@@ -43,7 +45,7 @@ A local, single-page YouTube subscription viewer with embedded playback. No back
 2. Click **Create Credentials > OAuth 2.0 Client ID**
 3. Application type: **Web application**
 4. Add to **Authorized JavaScript origins**: `http://localhost:8080`
-5. Add to **Authorized redirect URIs**: `http://localhost:8080`
+5. Add to **Authorized redirect URIs**: `http://localhost:8080` and `http://localhost:8080/`
 6. Click **Create**
 7. Download the JSON file and save it to the `config/` directory
    - It will be named something like `client_secret_XXXXX.apps.googleusercontent.com.json`
@@ -62,7 +64,16 @@ A local, single-page YouTube subscription viewer with embedded playback. No back
 ./scripts/setup.sh
 ```
 
-This generates `config/config.js` with your credentials and default settings (2.0x playback speed).
+This generates `config/config.js` with your credentials and default settings.
+
+## Configuration
+
+`config/config.js` contains:
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `defaultPlaybackSpeed` | `2.0` | Default video playback speed (overridable per session via UI) |
+| `openInBrowser` | `false` | When `true`, clicking a channel opens it on YouTube in a new tab |
 
 ## Usage
 
@@ -73,6 +84,10 @@ This generates `config/config.js` with your credentials and default settings (2.
 This starts a local server on port 8080, opens your browser, and cleans up when you Ctrl+C.
 
 On first visit, click **Sign In** to authenticate with your Google account and pull your subscriptions.
+
+### Sharing URLs
+
+Video URLs like `http://localhost:8080/#channel=UCxxx&video=yyy` are shareable. Anyone running the app locally can open them — even if they aren't subscribed to the channel. The channel and video IDs are universal.
 
 ## Scripts
 
@@ -89,8 +104,8 @@ The app uses minimal API quota (10,000 units/day free tier):
 |--------|------|------|
 | Load subscriptions | 1 unit/page | First visit (cached in localStorage) |
 | Latest video per channel | 1 unit/channel | Page load |
-| View channel videos | 1 unit | First click (cached in memory) |
-| Load comments | 1 unit | On demand |
+| View channel videos | 1 unit | First click per channel (cached in memory, prefetches next batch at 40 videos) |
+| Load comments | 1 unit | On demand per video (cached in memory) |
 
 Typical session with 100 subscriptions: ~110 units.
 

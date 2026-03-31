@@ -27,6 +27,7 @@ const CONFIG = {
   apiKey: '${API_KEY}',
   clientId: '${CLIENT_ID}',
   defaultPlaybackSpeed: 2.0,
+  openInBrowser: false,
 };
 EOF
 

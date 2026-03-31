@@ -52,6 +52,7 @@
     #search-box:focus { border-color: #3ea6ff; }
     #search-box::placeholder { color: #888; }
 
+    #speed-select,
     #sort-select {
       background: #272727;
       border: 1px solid #444;
@@ -369,13 +370,6 @@
       margin-top: 4px;
     }
 
-    .speed-indicator {
-      font-size: 12px;
-      color: #aaa;
-      background: #272727;
-      padding: 4px 10px;
-      border-radius: 12px;
-    }
   </style>
 </head>
 <body>
@@ -393,7 +387,16 @@
       <option value="alpha">A-Z</option>
       <option value="oldest">Oldest</option>
     </select>
-    <span class="speed-indicator" id="speed-display"></span>
+    <select id="speed-select">
+      <option value="0.5">0.5x</option>
+      <option value="0.75">0.75x</option>
+      <option value="1">1x</option>
+      <option value="1.25">1.25x</option>
+      <option value="1.5">1.5x</option>
+      <option value="1.75">1.75x</option>
+      <option value="2">2x</option>
+      <option value="2.5">2.5x</option>
+    </select>
     <button id="refresh-btn" style="display:none" onclick="refreshSubscriptions()">Refresh</button>
     <button id="sign-in-btn" onclick="handleSignIn()">Sign In</button>
     <button id="sign-out-btn" style="display:none" onclick="handleSignOut()">Sign Out</button>
@@ -439,8 +442,18 @@
   let videoOffset = 0;
   const videosPerPage = 4;
   const prefetchThreshold = 40;
+  let currentSpeed = currentSpeed;
 
-  document.getElementById('speed-display').textContent = CONFIG.defaultPlaybackSpeed + 'x';
+  // Set speed dropdown to config default
+  document.getElementById('speed-select').value = String(currentSpeed);
+
+  document.getElementById('speed-select').addEventListener('change', (e) => {
+    currentSpeed = parseFloat(e.target.value);
+    if (ytPlayer && ytPlayer.setPlaybackRate) {
+      ytPlayer.setPlaybackRate(currentSpeed);
+    }
+  });
+
 
   // Google Identity Services
   function initGIS() {
@@ -607,7 +620,13 @@
       const card = document.createElement('div');
       card.className = 'channel-card';
       card.id = `card-${sub.channelId}`;
-      card.onclick = () => showChannel(sub);
+      card.onclick = () => {
+        if (CONFIG.openInBrowser) {
+          window.open(`https://www.youtube.com/channel/${sub.channelId}`, '_blank');
+        } else {
+          showChannel(sub);
+        }
+      };
       card.innerHTML = `
         <img class="channel-card-thumb" src="${sub.latestVideo?.thumbnail || ''}" alt=""
              style="${sub.latestVideo ? '' : 'background:#272727;min-height:180px'}">
@@ -744,11 +763,11 @@
         },
         events: {
           onReady: (e) => {
-            e.target.setPlaybackRate(CONFIG.defaultPlaybackSpeed);
+            e.target.setPlaybackRate(currentSpeed);
           },
           onStateChange: (e) => {
             if (e.data === YT.PlayerState.PLAYING) {
-              e.target.setPlaybackRate(CONFIG.defaultPlaybackSpeed);
+              e.target.setPlaybackRate(currentSpeed);
             }
           },
           onError: (e) => {
@@ -905,16 +924,32 @@
     }
   }
 
-  function handleHashRoute() {
+  async function handleHashRoute() {
     const hash = location.hash.substring(1);
     if (!hash) return;
     const params = new URLSearchParams(hash);
     const channelId = params.get('channel');
     const videoId = params.get('video');
-    if (channelId) {
-      const sub = subscriptions.find(s => s.channelId === channelId);
-      if (sub) showChannel(sub, videoId || undefined);
+    if (!channelId) return;
+
+    let sub = subscriptions.find(s => s.channelId === channelId);
+    if (!sub) {
+      // Channel not in subscriptions — fetch channel info
+      try {
+        const url = `https://www.googleapis.com/youtube/v3/channels?part=snippet&id=${channelId}&key=${CONFIG.apiKey}`;
+        const r = await fetch(url);
+        const data = await r.json();
+        if (data.items?.length) {
+          const ch = data.items[0].snippet;
+          sub = {
+            channelId: channelId,
+            title: ch.title,
+            avatar: ch.thumbnails?.default?.url || '',
+          };
+        }
+      } catch {}
     }
+    if (sub) showChannel(sub, videoId || undefined);
   }
 
   window.addEventListener('hashchange', handleHashRoute);
