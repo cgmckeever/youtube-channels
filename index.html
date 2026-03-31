@@ -522,6 +522,19 @@
     .video-list-tab:hover { background: #333; }
     .video-list-tab.active { background: #3ea6ff; color: #000; border-color: #3ea6ff; }
 
+    .date-section {
+      grid-column: 1 / -1;
+      padding: 12px 0 4px;
+      border-bottom: 1px solid #333;
+      margin-bottom: 4px;
+    }
+
+    .date-section-label {
+      font-size: 14px;
+      font-weight: 600;
+      color: #aaa;
+    }
+
     #quota-warning {
       display: none;
       background: #f44336;
@@ -868,7 +881,21 @@
       });
     }
 
+    const showDateSections = sort === 'recent' || sort === 'oldest';
+    let lastDateLabel = '';
+
     for (const sub of filtered) {
+      if (showDateSections && sub.latestVideo?.publishedAt) {
+        const label = dateSectionLabel(sub.latestVideo.publishedAt);
+        if (label !== lastDateLabel) {
+          lastDateLabel = label;
+          const section = document.createElement('div');
+          section.className = 'date-section';
+          section.innerHTML = `<span class="date-section-label">${label}</span>`;
+          container.appendChild(section);
+        }
+      }
+
       const card = document.createElement('div');
       card.className = 'channel-card';
       card.id = `card-${sub.channelId}`;
@@ -1426,6 +1453,19 @@
   });
 
   // Utilities
+  function dateSectionLabel(dateStr) {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const videoDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+    if (videoDay.getTime() === today.getTime()) return 'Today';
+    if (videoDay.getTime() === yesterday.getTime()) return 'Yesterday';
+    return date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+  }
+
   function timeAgo(dateStr) {
     const seconds = Math.floor((Date.now() - new Date(dateStr)) / 1000);
     const intervals = [
