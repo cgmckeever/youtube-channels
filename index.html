@@ -740,6 +740,8 @@
       logStatus(`Loaded ${subscriptions.length} subscriptions`, 'info');
       subscriptions.sort((a, b) => a.title.localeCompare(b.title));
       localStorage.setItem('yt_subscriptions', JSON.stringify(subscriptions));
+      document.getElementById('sort-select').value = 'alpha';
+      localStorage.setItem('yt_sort_order', 'alpha');
       renderChannelList();
       loadLatestVideos(true);
     } catch (e) {
@@ -1352,8 +1354,12 @@
   }, { threshold: 0.3 });
   playerObserver.observe(document.getElementById('player-container'));
 
-  // Sort change
+  // Sort change — persist preference
+  const savedSort = localStorage.getItem('yt_sort_order');
+  if (savedSort) document.getElementById('sort-select').value = savedSort;
+
   document.getElementById('sort-select').addEventListener('change', () => {
+    localStorage.setItem('yt_sort_order', document.getElementById('sort-select').value);
     if (document.getElementById('channel-detail').style.display !== 'block') {
       renderChannelList();
     }
