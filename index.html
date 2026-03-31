@@ -443,13 +443,14 @@
   let videoOffset = 0;
   const videosPerPage = 4;
   const prefetchThreshold = 40;
-  let currentSpeed = CONFIG.defaultPlaybackSpeed;
+  let currentSpeed = parseFloat(sessionStorage.getItem('yt_speed')) || CONFIG.defaultPlaybackSpeed;
 
-  // Set speed dropdown to config default
+  // Set speed dropdown to saved or config default
   document.getElementById('speed-select').value = String(currentSpeed);
 
   document.getElementById('speed-select').addEventListener('change', (e) => {
     currentSpeed = parseFloat(e.target.value);
+    sessionStorage.setItem('yt_speed', currentSpeed);
     if (ytPlayer && ytPlayer.setPlaybackRate) {
       ytPlayer.setPlaybackRate(currentSpeed);
     }
