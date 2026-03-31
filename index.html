@@ -1508,6 +1508,7 @@
     const ts = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
     entry.innerHTML = `<span class="ts">${ts}</span>${msg}`;
     log.appendChild(entry);
+    while (log.children.length > 6) log.removeChild(log.firstChild);
     log.scrollTop = log.scrollHeight;
 
     updateStatusBadge();
@@ -1574,7 +1575,7 @@
 <div id="status-console">
   <div id="status-panel">
     <div id="status-panel-header">
-      <span>API Console</span>
+      <span>Channel Console</span>
       <button id="status-clear" onclick="clearStatusLog()">Clear</button>
     </div>
     <div id="status-log"></div>
