@@ -415,7 +415,7 @@
     <h1 id="header-title" onclick="showChannelList()" style="display:none">YouTube Channels</h1>
   </div>
   <div class="header-controls">
-    <input type="text" id="search-box" placeholder="Filter...">
+    <input type="text" id="search-box" placeholder="Filter or paste YouTube URL...">
     <select id="sort-select">
       <option value="alpha">A-Z</option>
       <option value="recent">Most Recent</option>
@@ -1036,10 +1036,50 @@
     }
   });
 
+  // YouTube URL parsing
+  function parseYouTubeUrl(text) {
+    const patterns = [
+      /(?:youtube\.com\/watch\?.*v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/,
+    ];
+    for (const p of patterns) {
+      const m = text.match(p);
+      if (m) return m[1];
+    }
+    return null;
+  }
+
+  async function openVideoByUrl(videoId) {
+    try {
+      const url = `https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${videoId}&key=${CONFIG.apiKey}`;
+      const r = await fetch(url);
+      const data = await r.json();
+      if (data.items?.length) {
+        const snippet = data.items[0].snippet;
+        const channelId = snippet.channelId;
+        let sub = subscriptions.find(s => s.channelId === channelId);
+        if (!sub) {
+          sub = {
+            channelId: channelId,
+            title: snippet.channelTitle,
+            avatar: '',
+          };
+        }
+        showChannel(sub, videoId);
+      }
+    } catch {}
+  }
+
   // Search filtering
   let searchTimeout;
   document.getElementById('search-box').addEventListener('input', () => {
     clearTimeout(searchTimeout);
+    const val = document.getElementById('search-box').value.trim();
+    const videoId = parseYouTubeUrl(val);
+    if (videoId) {
+      document.getElementById('search-box').value = '';
+      openVideoByUrl(videoId);
+      return;
+    }
     searchTimeout = setTimeout(() => {
       if (document.getElementById('channel-detail').style.display === 'block') {
         renderVideoPage();
