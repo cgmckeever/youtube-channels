@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YouTube Channels</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0f0f0f;
+      color: #f1f1f1;
+      min-height: 100vh;
+    }
+
+    header {
+      background: #1a1a1a;
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #333;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    header h1 {
+      font-size: 18px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    #search-box {
+      background: #272727;
+      border: 1px solid #444;
+      color: #f1f1f1;
+      padding: 8px 14px;
+      border-radius: 20px;
+      font-size: 14px;
+      width: 300px;
+      outline: none;
+    }
+
+    #search-box:focus { border-color: #3ea6ff; }
+    #search-box::placeholder { color: #888; }
+
+    #sort-select {
+      background: #272727;
+      border: 1px solid #444;
+      color: #f1f1f1;
+      padding: 8px 12px;
+      border-radius: 20px;
+      font-size: 13px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    #sign-in-btn, #sign-out-btn, #refresh-btn {
+      background: #272727;
+      color: #f1f1f1;
+      border: 1px solid #444;
+      padding: 8px 16px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+
+    #sign-in-btn:hover, #sign-out-btn:hover, #refresh-btn:hover {
+      background: #383838;
+    }
+
+    .back-btn {
+      background: none;
+      border: none;
+      color: #3ea6ff;
+      cursor: pointer;
+      font-size: 14px;
+      padding: 4px 8px;
+      margin-right: 12px;
+    }
+
+    .back-btn:hover { text-decoration: underline; }
+
+    /* Channel list view */
+    #channel-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+      gap: 16px;
+      padding: 24px;
+    }
+
+    .channel-card {
+      background: #1a1a1a;
+      border-radius: 12px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .channel-card:hover { background: #252525; }
+
+    .channel-card-thumb {
+      width: 100%;
+      aspect-ratio: 16/9;
+      object-fit: cover;
+      display: block;
+    }
+
+    .channel-card-info {
+      padding: 12px;
+      display: flex;
+      gap: 10px;
+    }
+
+    .channel-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .channel-card-text { flex: 1; min-width: 0; }
+
+    .channel-card-title {
+      font-size: 14px;
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .channel-card-video {
+      font-size: 12px;
+      color: #aaa;
+      margin-top: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .channel-card-date {
+      font-size: 11px;
+      color: #717171;
+      margin-top: 2px;
+    }
+
+    /* Channel detail view */
+    #channel-detail { display: none; padding: 0; }
+
+    #player-container {
+      width: 100%;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 24px 24px 0;
+    }
+
+    #player-wrapper {
+      position: relative;
+      width: 100%;
+      padding-bottom: 56.25%;
+      background: #000;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    #player-wrapper iframe, #player-wrapper div {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    #now-playing-title {
+      max-width: 900px;
+      margin: 12px auto 0;
+      padding: 0 24px;
+      font-size: 16px;
+      font-weight: 500;
+    }
+
+    #now-playing-date {
+      max-width: 900px;
+      margin: 4px auto 0;
+      padding: 0 24px;
+      font-size: 13px;
+      color: #aaa;
+    }
+
+    #video-list-container {
+      max-width: 900px;
+      margin: 20px auto;
+      padding: 0 24px 24px;
+    }
+
+    #video-list-container h3 {
+      font-size: 14px;
+      color: #aaa;
+      margin-bottom: 12px;
+      font-weight: 400;
+    }
+
+    .video-scroll {
+      display: flex;
+      gap: 12px;
+      overflow-x: auto;
+      padding-bottom: 12px;
+      scroll-behavior: smooth;
+    }
+
+    .video-scroll::-webkit-scrollbar { height: 6px; }
+    .video-scroll::-webkit-scrollbar-track { background: transparent; }
+    .video-scroll::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+
+    .scroll-controls {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 8px;
+      justify-content: flex-end;
+    }
+
+    .scroll-btn {
+      background: #272727;
+      border: 1px solid #444;
+      color: #f1f1f1;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .scroll-btn:hover { background: #383838; }
+
+    .video-card {
+      flex: 0 0 200px;
+      cursor: pointer;
+      border-radius: 8px;
+      overflow: hidden;
+      transition: opacity 0.2s;
+    }
+
+    .video-card:hover { opacity: 0.8; }
+    .video-card.active { outline: 2px solid #3ea6ff; }
+
+    .video-card img {
+      width: 200px;
+      height: 112px;
+      object-fit: cover;
+      display: block;
+    }
+
+    .video-card-title {
+      padding: 6px 4px;
+      font-size: 12px;
+      line-height: 1.3;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .video-card-date {
+      padding: 0 4px 6px;
+      font-size: 11px;
+      color: #717171;
+    }
+
+    /* Floating player */
+    #player-container.floating #player-wrapper {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      width: 360px;
+      padding-bottom: 0;
+      height: 203px;
+      z-index: 200;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+      border: 1px solid #333;
+    }
+
+    /* Loading */
+    .loading {
+      text-align: center;
+      padding: 60px;
+      color: #888;
+      font-size: 16px;
+    }
+
+    /* Comments */
+    #comments-container {
+      max-width: 900px;
+      margin: 0 auto 24px;
+      padding: 0 24px;
+    }
+
+    #comments-toggle {
+      background: #272727;
+      border: 1px solid #444;
+      color: #f1f1f1;
+      padding: 10px 20px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 13px;
+      width: 100%;
+    }
+
+    #comments-toggle:hover { background: #383838; }
+
+    #comments-list {
+      max-height: 600px;
+      overflow-y: auto;
+    }
+
+    #comments-list::-webkit-scrollbar { width: 6px; }
+    #comments-list::-webkit-scrollbar-track { background: transparent; }
+    #comments-list::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+
+    .comment {
+      padding: 12px 0;
+      border-bottom: 1px solid #272727;
+    }
+
+    .comment-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+
+    .comment-avatar {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+    }
+
+    .comment-author {
+      font-size: 13px;
+      font-weight: 500;
+      color: #f1f1f1;
+    }
+
+    .comment-date {
+      font-size: 11px;
+      color: #717171;
+    }
+
+    .comment-text {
+      font-size: 13px;
+      color: #ddd;
+      line-height: 1.5;
+      white-space: pre-wrap;
+    }
+
+    .comment-likes {
+      font-size: 12px;
+      color: #888;
+      margin-top: 4px;
+    }
+
+    .speed-indicator {
+      font-size: 12px;
+      color: #aaa;
+      background: #272727;
+      padding: 4px 10px;
+      border-radius: 12px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div style="display:flex;align-items:center">
+    <button class="back-btn" id="back-btn" style="display:none">&larr; Back</button>
+    <svg onclick="showChannelList()" style="cursor:pointer;margin-right:10px;flex-shrink:0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 110 20" width="110" height="20"><path d="M27.97 3.12c-.32-1.19-1.26-2.13-2.45-2.45C23.33 0 14.34 0 14.34 0S5.36 0 3.17.67C1.98.99 1.04 1.93.72 3.12 0 5.3 0 10 0 10s0 4.7.72 6.88c.32 1.19 1.26 2.13 2.45 2.45C5.36 20 14.34 20 14.34 20s8.99 0 11.18-.67c1.19-.32 2.13-1.26 2.45-2.45C28.65 14.7 28.65 10 28.65 10s0-4.7-.68-6.88z" fill="#FF0000"/><path d="M11.47 14.28L18.85 10l-7.38-4.28v8.56z" fill="#FFF"/><text x="33" y="15" fill="#FFF" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="14" font-weight="600">Channels</text></svg>
+    <h1 id="header-title" onclick="showChannelList()" style="display:none">YouTube Channels</h1>
+  </div>
+  <div class="header-controls">
+    <input type="text" id="search-box" placeholder="Filter...">
+    <select id="sort-select">
+      <option value="recent">Most Recent</option>
+      <option value="alpha">A-Z</option>
+      <option value="oldest">Oldest</option>
+    </select>
+    <span class="speed-indicator" id="speed-display"></span>
+    <button id="refresh-btn" style="display:none" onclick="refreshSubscriptions()">Refresh</button>
+    <button id="sign-in-btn" onclick="handleSignIn()">Sign In</button>
+    <button id="sign-out-btn" style="display:none" onclick="handleSignOut()">Sign Out</button>
+  </div>
+</header>
+
+<div id="channel-list"></div>
+
+<div id="channel-detail">
+  <div id="player-container">
+    <div id="player-wrapper">
+      <div id="player"></div>
+    </div>
+  </div>
+  <div id="now-playing-title"></div>
+  <div id="now-playing-date"></div>
+  <div id="video-list-container">
+    <div class="scroll-controls">
+      <button class="scroll-btn" onclick="scrollVideos(-1)">&larr;</button>
+      <button class="scroll-btn" onclick="scrollVideos(1)">&rarr;</button>
+    </div>
+    <h3 id="video-list-heading">Recent Videos</h3>
+    <div class="video-scroll" id="video-scroll"></div>
+  </div>
+  <div id="comments-container">
+    <button id="comments-toggle" onclick="toggleComments()">Show Comments</button>
+    <div id="comments-list" style="display:none"></div>
+  </div>
+</div>
+
+<script src="config/config.js"></script>
+<script>
+  let tokenClient;
+  let ytPlayer;
+  let subscriptions = [];
+  let currentVideos = [];
+  let accessToken = null;
+  let videoCache = {};       // channelId -> { videos: [], nextPageToken: '' }
+  let commentCache = {};     // videoId -> { comments: [], nextPageToken: '' }
+  let currentChannelId = '';
+  let currentVideoId = '';
+  let commentsOpen = false;
+  let videoOffset = 0;
+  const videosPerPage = 4;
+  const prefetchThreshold = 40;
+
+  document.getElementById('speed-display').textContent = CONFIG.defaultPlaybackSpeed + 'x';
+
+  // Google Identity Services
+  function initGIS() {
+    tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: CONFIG.clientId,
+      scope: 'https://www.googleapis.com/auth/youtube.readonly',
+      callback: (response) => {
+        if (response.access_token) {
+          accessToken = response.access_token;
+          localStorage.setItem('yt_access_token', accessToken);
+          onSignedIn();
+        }
+      },
+    });
+
+    // Check for cached token
+    const cached = localStorage.getItem('yt_access_token');
+    if (cached) {
+      accessToken = cached;
+      validateToken(cached).then(valid => {
+        if (valid) onSignedIn();
+        else localStorage.removeItem('yt_access_token');
+      });
+    }
+  }
+
+  async function validateToken(token) {
+    try {
+      const r = await fetch(`https://www.googleapis.com/oauth2/v1/tokeninfo?access_token=${token}`);
+      return r.ok;
+    } catch { return false; }
+  }
+
+  function handleSignIn() {
+    tokenClient.requestAccessToken({ prompt: 'consent' });
+  }
+
+  function handleSignOut() {
+    accessToken = null;
+    localStorage.removeItem('yt_access_token');
+    localStorage.removeItem('yt_subscriptions');
+    document.getElementById('sign-in-btn').style.display = '';
+    document.getElementById('sign-out-btn').style.display = 'none';
+    document.getElementById('refresh-btn').style.display = 'none';
+    document.getElementById('channel-list').innerHTML = '';
+    document.getElementById('channel-detail').style.display = 'none';
+  }
+
+  async function onSignedIn() {
+    document.getElementById('sign-in-btn').style.display = 'none';
+    document.getElementById('sign-out-btn').style.display = '';
+    document.getElementById('refresh-btn').style.display = '';
+
+    const cached = localStorage.getItem('yt_subscriptions');
+    if (cached) {
+      subscriptions = JSON.parse(cached);
+      renderChannelList();
+      fetchLatestVideos();
+    } else {
+      await fetchSubscriptions();
+    }
+    handleHashRoute();
+  }
+
+  // Fetch all subscriptions (paginated)
+  async function fetchSubscriptions() {
+    document.getElementById('channel-list').innerHTML = '<div class="loading">Loading subscriptions...</div>';
+    subscriptions = [];
+    let pageToken = '';
+
+    try {
+      do {
+        const url = `https://www.googleapis.com/youtube/v3/subscriptions?part=snippet&mine=true&maxResults=50&order=alphabetical&pageToken=${pageToken}&key=${CONFIG.apiKey}`;
+        const r = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
+
+        if (r.status === 401) {
+          localStorage.removeItem('yt_access_token');
+          handleSignOut();
+          return;
+        }
+
+        const data = await r.json();
+        for (const item of data.items || []) {
+          subscriptions.push({
+            channelId: item.snippet.resourceId.channelId,
+            title: item.snippet.title,
+            avatar: item.snippet.thumbnails?.default?.url || '',
+          });
+        }
+        pageToken = data.nextPageToken || '';
+      } while (pageToken);
+
+      subscriptions.sort((a, b) => a.title.localeCompare(b.title));
+      localStorage.setItem('yt_subscriptions', JSON.stringify(subscriptions));
+      renderChannelList();
+      fetchLatestVideos();
+    } catch (e) {
+      document.getElementById('channel-list').innerHTML = `<div class="loading">Error: ${e.message}</div>`;
+    }
+  }
+
+  function refreshSubscriptions() {
+    localStorage.removeItem('yt_subscriptions');
+    fetchSubscriptions();
+  }
+
+  // Fetch latest video for each channel (batched)
+  async function fetchLatestVideos() {
+    const batchSize = 5;
+    for (let i = 0; i < subscriptions.length; i += batchSize) {
+      const batch = subscriptions.slice(i, i + batchSize);
+      await Promise.all(batch.map(async (sub) => {
+        if (sub.latestVideo) return;
+        try {
+          const uploadsId = 'UU' + sub.channelId.substring(2);
+          const url = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${uploadsId}&maxResults=1&key=${CONFIG.apiKey}`;
+          const r = await fetch(url);
+          const data = await r.json();
+          if (data.items?.length) {
+            const v = data.items[0].snippet;
+            sub.latestVideo = {
+              videoId: v.resourceId.videoId,
+              title: v.title,
+              thumbnail: v.thumbnails?.medium?.url || v.thumbnails?.default?.url || '',
+              publishedAt: v.publishedAt,
+            };
+            updateChannelCard(sub);
+          }
+        } catch {}
+      }));
+      // Re-render to update sort order as videos load
+      if (document.getElementById('sort-select').value !== 'alpha') {
+        renderChannelList();
+      }
+    }
+  }
+
+  // Render channel list
+  function renderChannelList() {
+    const container = document.getElementById('channel-list');
+    container.innerHTML = '';
+
+    const filter = document.getElementById('search-box').value.toLowerCase();
+    const filtered = subscriptions.filter(s => s.title.toLowerCase().includes(filter));
+
+    const sort = document.getElementById('sort-select').value;
+    if (sort === 'alpha') {
+      filtered.sort((a, b) => a.title.localeCompare(b.title));
+    } else if (sort === 'recent') {
+      filtered.sort((a, b) => {
+        const da = a.latestVideo?.publishedAt || '';
+        const db = b.latestVideo?.publishedAt || '';
+        return db.localeCompare(da);
+      });
+    } else if (sort === 'oldest') {
+      filtered.sort((a, b) => {
+        const da = a.latestVideo?.publishedAt || '';
+        const db = b.latestVideo?.publishedAt || '';
+        return da.localeCompare(db);
+      });
+    }
+
+    for (const sub of filtered) {
+      const card = document.createElement('div');
+      card.className = 'channel-card';
+      card.id = `card-${sub.channelId}`;
+      card.onclick = () => showChannel(sub);
+      card.innerHTML = `
+        <img class="channel-card-thumb" src="${sub.latestVideo?.thumbnail || ''}" alt=""
+             style="${sub.latestVideo ? '' : 'background:#272727;min-height:180px'}">
+        <div class="channel-card-info">
+          <img class="channel-avatar" src="${sub.avatar}" alt="">
+          <div class="channel-card-text">
+            <div class="channel-card-title">${sub.title}</div>
+            <div class="channel-card-video">${sub.latestVideo?.title || 'Loading...'}</div>
+            <div class="channel-card-date">${sub.latestVideo ? timeAgo(sub.latestVideo.publishedAt) : ''}</div>
+          </div>
+        </div>
+      `;
+      container.appendChild(card);
+    }
+  }
+
+  function updateChannelCard(sub) {
+    const card = document.getElementById(`card-${sub.channelId}`);
+    if (!card) return;
+    const thumb = card.querySelector('.channel-card-thumb');
+    const videoTitle = card.querySelector('.channel-card-video');
+    const date = card.querySelector('.channel-card-date');
+    if (sub.latestVideo) {
+      thumb.src = sub.latestVideo.thumbnail;
+      videoTitle.textContent = sub.latestVideo.title;
+      date.textContent = timeAgo(sub.latestVideo.publishedAt);
+    }
+  }
+
+  // Show channel detail
+  async function showChannel(sub, targetVideoId) {
+    document.getElementById('channel-list').style.display = 'none';
+    document.getElementById('channel-detail').style.display = 'block';
+    document.getElementById('back-btn').style.display = '';
+    document.getElementById('header-title').textContent = sub.title;
+    document.getElementById('video-scroll').innerHTML = '<div class="loading">Loading videos...</div>';
+    document.getElementById('now-playing-title').textContent = '';
+    document.getElementById('now-playing-date').textContent = '';
+    document.getElementById('video-list-heading').textContent = `Recent Videos`;
+
+    try {
+      currentChannelId = sub.channelId;
+      videoOffset = 0;
+
+      if (!videoCache[currentChannelId]) {
+        videoCache[currentChannelId] = { videos: [], nextPageToken: '' };
+        await fetchChannelVideos(currentChannelId);
+      }
+
+      currentVideos = videoCache[currentChannelId].videos;
+      renderVideoPage();
+
+      const target = targetVideoId
+        ? currentVideos.find(v => v.videoId === targetVideoId)
+        : currentVideos[0];
+      if (target) playVideo(target);
+    } catch (e) {
+      document.getElementById('video-scroll').innerHTML = `<div class="loading">Error: ${e.message}</div>`;
+    }
+  }
+
+  async function fetchChannelVideos(channelId) {
+    const cache = videoCache[channelId];
+    const uploadsId = 'UU' + channelId.substring(2);
+    const url = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${uploadsId}&maxResults=50&pageToken=${cache.nextPageToken}&key=${CONFIG.apiKey}`;
+    const r = await fetch(url);
+    const data = await r.json();
+    const newVideos = (data.items || []).map(item => ({
+      videoId: item.snippet.resourceId.videoId,
+      title: item.snippet.title,
+      thumbnail: item.snippet.thumbnails?.medium?.url || item.snippet.thumbnails?.default?.url || '',
+      publishedAt: item.snippet.publishedAt,
+    }));
+    cache.videos = cache.videos.concat(newVideos);
+    cache.nextPageToken = data.nextPageToken || '';
+  }
+
+  function checkPrefetch() {
+    const cache = videoCache[currentChannelId];
+    if (cache && cache.nextPageToken && videoOffset + videosPerPage >= cache.videos.length - 10) {
+      fetchChannelVideos(currentChannelId).then(() => {
+        currentVideos = cache.videos;
+      });
+    }
+  }
+
+  function renderVideoPage() {
+    const container = document.getElementById('video-scroll');
+    container.innerHTML = '';
+
+    const searchTerm = document.getElementById('search-box').value.toLowerCase();
+    const filtered = searchTerm
+      ? currentVideos.filter(v => v.title.toLowerCase().includes(searchTerm))
+      : currentVideos;
+
+    const page = searchTerm ? filtered : filtered.slice(videoOffset, videoOffset + videosPerPage);
+
+    for (const video of page) {
+      const card = document.createElement('div');
+      card.className = 'video-card';
+      card.id = `video-${video.videoId}`;
+      card.onclick = () => playVideo(video);
+      card.innerHTML = `
+        <img src="${video.thumbnail}" alt="">
+        <div class="video-card-title">${video.title}</div>
+        <div class="video-card-date">${timeAgo(video.publishedAt)}</div>
+      `;
+      container.appendChild(card);
+    }
+
+    checkPrefetch();
+  }
+
+  function playVideo(video) {
+    document.querySelectorAll('.video-card').forEach(c => c.classList.remove('active'));
+    const card = document.getElementById(`video-${video.videoId}`);
+    if (card) card.classList.add('active');
+
+    currentVideoId = video.videoId;
+    history.replaceState(null, '', `#channel=${currentChannelId}&video=${video.videoId}`);
+    resetComments();
+    document.getElementById('now-playing-title').textContent = video.title;
+    document.getElementById('now-playing-date').textContent = formatDate(video.publishedAt);
+
+    if (ytPlayer && ytPlayer.loadVideoById) {
+      ytPlayer.loadVideoById(video.videoId);
+    } else {
+      ytPlayer = new YT.Player('player', {
+        videoId: video.videoId,
+        playerVars: {
+          autoplay: 1,
+          modestbranding: 1,
+          rel: 0,
+        },
+        events: {
+          onReady: (e) => {
+            e.target.setPlaybackRate(CONFIG.defaultPlaybackSpeed);
+          },
+          onStateChange: (e) => {
+            if (e.data === YT.PlayerState.PLAYING) {
+              e.target.setPlaybackRate(CONFIG.defaultPlaybackSpeed);
+            }
+          },
+          onError: (e) => {
+            showEmbedError(video.videoId);
+          },
+        },
+      });
+    }
+  }
+
+  function showEmbedError(videoId) {
+    const wrapper = document.getElementById('player-wrapper');
+    wrapper.innerHTML = `
+      <div style="position:absolute;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#1a1a1a;">
+        <div style="color:#aaa;margin-bottom:12px;">Embedding disabled for this video</div>
+        <a href="https://www.youtube.com/watch?v=${videoId}" target="_blank"
+           style="color:#3ea6ff;text-decoration:none;padding:8px 16px;border:1px solid #3ea6ff;border-radius:20px;">
+          Watch on YouTube
+        </a>
+      </div>
+      <div id="player"></div>
+    `;
+  }
+
+  // Comments
+  async function toggleComments() {
+    const list = document.getElementById('comments-list');
+    const btn = document.getElementById('comments-toggle');
+
+    if (commentsOpen) {
+      list.style.display = 'none';
+      btn.textContent = 'Show Comments';
+      commentsOpen = false;
+      return;
+    }
+
+    commentsOpen = true;
+    btn.textContent = 'Hide Comments';
+    list.style.display = 'block';
+
+    if (!commentCache[currentVideoId]) {
+      commentCache[currentVideoId] = { comments: [], nextPageToken: '' };
+      list.innerHTML = '<div class="loading" style="padding:20px">Loading comments...</div>';
+      await fetchComments(currentVideoId);
+    }
+    renderComments();
+  }
+
+  async function fetchComments(videoId) {
+    const cache = commentCache[videoId];
+    try {
+      const url = `https://www.googleapis.com/youtube/v3/commentThreads?part=snippet&videoId=${videoId}&maxResults=50&order=relevance&pageToken=${cache.nextPageToken}&key=${CONFIG.apiKey}`;
+      const r = await fetch(url);
+      const data = await r.json();
+
+      if (data.error) {
+        cache.disabled = true;
+        return;
+      }
+
+      const newComments = (data.items || []).map(item => {
+        const c = item.snippet.topLevelComment.snippet;
+        return {
+          author: c.authorDisplayName,
+          avatar: c.authorProfileImageUrl,
+          text: c.textDisplay,
+          likes: c.likeCount,
+          publishedAt: c.publishedAt,
+        };
+      });
+      cache.comments = cache.comments.concat(newComments);
+      cache.nextPageToken = data.nextPageToken || '';
+    } catch {
+      cache.disabled = true;
+    }
+  }
+
+  function renderComments() {
+    const list = document.getElementById('comments-list');
+    const cache = commentCache[currentVideoId];
+
+    if (!cache || cache.disabled) {
+      list.innerHTML = '<div style="color:#888;padding:12px 0;font-size:13px">Comments are disabled for this video.</div>';
+      return;
+    }
+
+    list.innerHTML = '';
+    for (const c of cache.comments) {
+      const div = document.createElement('div');
+      div.className = 'comment';
+      div.innerHTML = `
+        <div class="comment-header">
+          <img class="comment-avatar" src="${c.avatar}" alt="">
+          <span class="comment-author">${c.author}</span>
+          <span class="comment-date">${timeAgo(c.publishedAt)}</span>
+        </div>
+        <div class="comment-text">${c.text}</div>
+        ${c.likes ? `<div class="comment-likes">${c.likes} like${c.likes !== 1 ? 's' : ''}</div>` : ''}
+      `;
+      list.appendChild(div);
+    }
+
+    if (cache.nextPageToken) {
+      const loadMore = document.createElement('div');
+      loadMore.style.cssText = 'text-align:center;padding:16px;';
+      loadMore.innerHTML = '<button style="background:#272727;border:1px solid #444;color:#3ea6ff;padding:8px 20px;border-radius:20px;cursor:pointer;font-size:13px">Load More Comments</button>';
+      loadMore.querySelector('button').onclick = async () => {
+        await fetchComments(currentVideoId);
+        renderComments();
+      };
+      list.appendChild(loadMore);
+    }
+  }
+
+  function resetComments() {
+    commentsOpen = false;
+    document.getElementById('comments-list').style.display = 'none';
+    document.getElementById('comments-list').innerHTML = '';
+    document.getElementById('comments-toggle').textContent = 'Show Comments';
+  }
+
+  // Scroll-based comment prefetch
+  function setupCommentScroll() {
+    const list = document.getElementById('comments-list');
+    list.addEventListener('scroll', () => {
+      if (!commentsOpen || !currentVideoId) return;
+      const cache = commentCache[currentVideoId];
+      if (!cache || !cache.nextPageToken) return;
+      if (list.scrollTop + list.clientHeight >= list.scrollHeight - 200) {
+        fetchComments(currentVideoId).then(() => renderComments());
+      }
+    });
+  }
+
+  function scrollVideos(dir) {
+    const maxOffset = currentVideos.length - videosPerPage;
+    videoOffset = Math.max(0, Math.min(videoOffset + (dir * videosPerPage), maxOffset));
+    renderVideoPage();
+  }
+
+  function showChannelList() {
+    history.replaceState(null, '', location.pathname);
+    document.getElementById('channel-list').style.display = '';
+    document.getElementById('channel-detail').style.display = 'none';
+    document.getElementById('back-btn').style.display = 'none';
+    document.getElementById('header-title').textContent = 'YouTube Channels';
+    document.getElementById('search-box').value = '';
+    renderChannelList();
+
+    if (ytPlayer && ytPlayer.destroy) {
+      ytPlayer.destroy();
+      ytPlayer = null;
+      document.getElementById('player-wrapper').innerHTML = '<div id="player"></div>';
+    }
+  }
+
+  function handleHashRoute() {
+    const hash = location.hash.substring(1);
+    if (!hash) return;
+    const params = new URLSearchParams(hash);
+    const channelId = params.get('channel');
+    const videoId = params.get('video');
+    if (channelId) {
+      const sub = subscriptions.find(s => s.channelId === channelId);
+      if (sub) showChannel(sub, videoId || undefined);
+    }
+  }
+
+  window.addEventListener('hashchange', handleHashRoute);
+  document.getElementById('back-btn').onclick = showChannelList;
+  setupCommentScroll();
+
+  // Floating player on scroll
+  const playerObserver = new IntersectionObserver((entries) => {
+    const container = document.getElementById('player-container');
+    if (document.getElementById('channel-detail').style.display !== 'block') return;
+    container.classList.toggle('floating', !entries[0].isIntersecting);
+  }, { threshold: 0.3 });
+  playerObserver.observe(document.getElementById('player-container'));
+
+  // Sort change
+  document.getElementById('sort-select').addEventListener('change', () => {
+    if (document.getElementById('channel-detail').style.display !== 'block') {
+      renderChannelList();
+    }
+  });
+
+  // Search filtering
+  let searchTimeout;
+  document.getElementById('search-box').addEventListener('input', () => {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+      if (document.getElementById('channel-detail').style.display === 'block') {
+        renderVideoPage();
+      } else {
+        renderChannelList();
+      }
+    }, 200);
+  });
+
+  // Utilities
+  function timeAgo(dateStr) {
+    const seconds = Math.floor((Date.now() - new Date(dateStr)) / 1000);
+    const intervals = [
+      [31536000, 'year'], [2592000, 'month'], [604800, 'week'],
+      [86400, 'day'], [3600, 'hour'], [60, 'minute'],
+    ];
+    for (const [secs, label] of intervals) {
+      const count = Math.floor(seconds / secs);
+      if (count >= 1) return `${count} ${label}${count > 1 ? 's' : ''} ago`;
+    }
+    return 'just now';
+  }
+
+  function formatDate(dateStr) {
+    return new Date(dateStr).toLocaleDateString('en-US', {
+      year: 'numeric', month: 'long', day: 'numeric',
+    });
+  }
+
+  // Load YouTube IFrame API
+  const ytScript = document.createElement('script');
+  ytScript.src = 'https://www.youtube.com/iframe_api';
+  document.head.appendChild(ytScript);
+</script>
+
+<!-- Google Identity Services -->
+<script src="https://accounts.google.com/gsi/client" onload="initGIS()"></script>
+
+</body>
+</html>
