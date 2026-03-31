@@ -630,10 +630,10 @@
       card.onclick = () => {
         if (CONFIG.openInBrowser) {
           const videoId = sub.latestVideo?.videoId;
-          const url = videoId
-            ? `https://www.youtube.com/watch?v=${videoId}`
-            : `https://www.youtube.com/channel/${sub.channelId}`;
-          window.open(url, '_blank');
+          const hash = videoId
+            ? `#channel=${sub.channelId}&video=${videoId}`
+            : `#channel=${sub.channelId}`;
+          window.open(`${location.origin}${location.pathname}${hash}`, '_blank');
         } else {
           showChannel(sub);
         }
