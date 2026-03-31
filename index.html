@@ -404,6 +404,135 @@
       margin-top: 4px;
     }
 
+    /* Status Console */
+    #status-console {
+      position: fixed;
+      bottom: 16px;
+      right: 16px;
+      z-index: 300;
+      font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+      font-size: 12px;
+    }
+
+    #status-toggle {
+      background: #1a1a1a;
+      border: 1px solid #333;
+      color: #888;
+      padding: 6px 12px;
+      border-radius: 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-left: auto;
+    }
+
+    #status-toggle:hover { background: #252525; }
+
+    #status-toggle .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #4caf50;
+    }
+
+    #status-toggle .dot.has-errors { background: #f44336; }
+    #status-toggle .dot.has-warnings { background: #ff9800; }
+
+    #status-panel {
+      display: none;
+      background: #1a1a1a;
+      border: 1px solid #333;
+      border-radius: 12px;
+      margin-bottom: 8px;
+      width: 420px;
+      max-height: 300px;
+      overflow: hidden;
+    }
+
+    #status-panel.open { display: flex; flex-direction: column; }
+
+    #status-panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      border-bottom: 1px solid #333;
+      color: #aaa;
+      font-size: 11px;
+      flex-shrink: 0;
+    }
+
+    #status-clear {
+      background: none;
+      border: none;
+      color: #888;
+      cursor: pointer;
+      font-size: 11px;
+      padding: 2px 6px;
+    }
+
+    #status-clear:hover { color: #f1f1f1; }
+
+    #status-log {
+      overflow-y: auto;
+      padding: 8px 12px;
+      flex: 1;
+    }
+
+    #status-log::-webkit-scrollbar { width: 4px; }
+    #status-log::-webkit-scrollbar-track { background: transparent; }
+    #status-log::-webkit-scrollbar-thumb { background: #444; border-radius: 2px; }
+
+    .status-entry {
+      padding: 3px 0;
+      line-height: 1.4;
+      color: #888;
+      border-bottom: 1px solid #1f1f1f;
+    }
+
+    .status-entry:last-child { border-bottom: none; }
+    .status-entry.error { color: #f44336; }
+    .status-entry.warn { color: #ff9800; }
+    .status-entry.info { color: #4caf50; }
+
+    .status-entry .ts {
+      color: #555;
+      margin-right: 6px;
+    }
+
+    /* Video list toggle */
+    .video-list-tabs {
+      display: flex;
+      gap: 0;
+      margin-bottom: 12px;
+    }
+
+    .video-list-tab {
+      background: #272727;
+      border: 1px solid #444;
+      color: #888;
+      padding: 6px 16px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+
+    .video-list-tab:first-child { border-radius: 16px 0 0 16px; }
+    .video-list-tab:last-child { border-radius: 0 16px 16px 0; border-left: none; }
+    .video-list-tab:hover { background: #333; }
+    .video-list-tab.active { background: #3ea6ff; color: #000; border-color: #3ea6ff; }
+
+    #quota-warning {
+      display: none;
+      background: #f44336;
+      color: #fff;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 12px;
+      border-radius: 12px;
+      white-space: nowrap;
+    }
+
   </style>
 </head>
 <body>
@@ -413,6 +542,7 @@
     <button class="back-btn" id="back-btn" style="display:none">&larr; Back</button>
     <svg onclick="showChannelList()" style="cursor:pointer;margin-right:10px;flex-shrink:0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 110 20" width="110" height="20"><path d="M27.97 3.12c-.32-1.19-1.26-2.13-2.45-2.45C23.33 0 14.34 0 14.34 0S5.36 0 3.17.67C1.98.99 1.04 1.93.72 3.12 0 5.3 0 10 0 10s0 4.7.72 6.88c.32 1.19 1.26 2.13 2.45 2.45C5.36 20 14.34 20 14.34 20s8.99 0 11.18-.67c1.19-.32 2.13-1.26 2.45-2.45C28.65 14.7 28.65 10 28.65 10s0-4.7-.68-6.88z" fill="#FF0000"/><path d="M11.47 14.28L18.85 10l-7.38-4.28v8.56z" fill="#FFF"/><text x="33" y="15" fill="#FFF" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="14" font-weight="600">Channels</text></svg>
     <h1 id="header-title" onclick="showChannelList()" style="display:none">YouTube Channels</h1>
+    <span id="quota-warning"></span>
   </div>
   <div class="header-controls">
     <input type="text" id="search-box" placeholder="Filter or paste YouTube URL...">
@@ -454,11 +584,16 @@
     <div id="now-playing-date"></div>
   </div>
   <div id="video-list-container">
-    <div class="scroll-controls">
-      <button class="scroll-btn" onclick="scrollVideos(-1)">&larr;</button>
-      <button class="scroll-btn" onclick="scrollVideos(1)">&rarr;</button>
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <div class="video-list-tabs">
+        <button class="video-list-tab active" id="tab-recent" onclick="switchVideoTab('recent')">Recent</button>
+        <button class="video-list-tab" id="tab-related" onclick="switchVideoTab('related')">Related</button>
+      </div>
+      <div class="scroll-controls" style="margin-bottom:0">
+        <button class="scroll-btn" onclick="scrollVideos(-1)">&larr;</button>
+        <button class="scroll-btn" onclick="scrollVideos(1)">&rarr;</button>
+      </div>
     </div>
-    <h3 id="video-list-heading">Recent Videos</h3>
     <div class="video-scroll" id="video-scroll"></div>
   </div>
   <div id="comments-container">
@@ -482,6 +617,8 @@
   let videoOffset = 0;
   const videosPerPage = 4;
   const prefetchThreshold = 40;
+  let videoTab = 'recent'; // 'recent' or 'related'
+  let relatedCache = {};   // videoId -> { videos: [], nextPageToken: '' }
   let currentSpeed = parseFloat(sessionStorage.getItem('yt_speed')) || CONFIG.defaultPlaybackSpeed;
 
   // Set speed dropdown to saved or config default
@@ -543,6 +680,8 @@
     accessToken = null;
     localStorage.removeItem('yt_access_token');
     localStorage.removeItem('yt_subscriptions');
+    localStorage.removeItem('yt_latest_videos');
+    clearChannelCaches();
     document.getElementById('sign-in-btn').style.display = '';
     document.getElementById('sign-out-btn').style.display = 'none';
     document.getElementById('refresh-btn').style.display = 'none';
@@ -558,8 +697,12 @@
     const cached = localStorage.getItem('yt_subscriptions');
     if (cached) {
       subscriptions = JSON.parse(cached);
-      renderChannelList();
-      fetchLatestVideos();
+      if (subscriptions.length === 0) {
+        await fetchSubscriptions();
+      } else {
+        renderChannelList();
+        loadLatestVideos();
+      }
     } else {
       await fetchSubscriptions();
     }
@@ -573,16 +716,17 @@
     let pageToken = '';
 
     try {
+      logStatus('Fetching subscriptions...', 'info');
       do {
         const url = `https://www.googleapis.com/youtube/v3/subscriptions?part=snippet&mine=true&maxResults=50&order=alphabetical&pageToken=${pageToken}&key=${CONFIG.apiKey}`;
-        const r = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
+        const data = await apiFetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
 
-        if (r.status === 401) {
-          refreshToken();
+        if (data._error) {
+          if (data.status === 401) { refreshToken(); return; }
+          document.getElementById('channel-list').innerHTML = `<div class="loading">Error loading subscriptions — check console</div>`;
           return;
         }
 
-        const data = await r.json();
         for (const item of data.items || []) {
           subscriptions.push({
             channelId: item.snippet.resourceId.channelId,
@@ -593,48 +737,107 @@
         pageToken = data.nextPageToken || '';
       } while (pageToken);
 
+      logStatus(`Loaded ${subscriptions.length} subscriptions`, 'info');
       subscriptions.sort((a, b) => a.title.localeCompare(b.title));
       localStorage.setItem('yt_subscriptions', JSON.stringify(subscriptions));
       renderChannelList();
-      fetchLatestVideos();
+      loadLatestVideos(true);
     } catch (e) {
+      logStatus(`subscriptions: ${e.message}`, 'error');
       document.getElementById('channel-list').innerHTML = `<div class="loading">Error: ${e.message}</div>`;
     }
   }
 
   function refreshSubscriptions() {
     localStorage.removeItem('yt_subscriptions');
+    localStorage.removeItem('yt_latest_videos');
+    clearChannelCaches();
+    videoCache = {};
     fetchSubscriptions();
+  }
+
+  function clearChannelCaches() {
+    const keys = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key.startsWith('yt_channel_') || key.startsWith('yt_related_')) keys.push(key);
+    }
+    keys.forEach(k => localStorage.removeItem(k));
+  }
+
+  const LATEST_VIDEOS_TTL = 3 * 60 * 60 * 1000; // 3 hours
+
+  function loadLatestVideos(forceRefresh = false) {
+    const cached = localStorage.getItem('yt_latest_videos');
+    if (cached && !forceRefresh) {
+      const { timestamp, videos } = JSON.parse(cached);
+      const age = Date.now() - timestamp;
+      if (age < LATEST_VIDEOS_TTL) {
+        const hours = (age / 3600000).toFixed(1);
+        logStatus(`Using cached latest videos (${hours}h old)`, 'info');
+        for (const sub of subscriptions) {
+          if (videos[sub.channelId]) {
+            sub.latestVideo = videos[sub.channelId];
+          }
+        }
+        renderChannelList();
+        return;
+      }
+      logStatus('Latest videos cache expired — refreshing', 'info');
+    }
+    fetchLatestVideos();
   }
 
   // Fetch latest video for each channel (batched)
   async function fetchLatestVideos() {
+    logStatus(`Fetching latest videos for ${subscriptions.length} channels...`, 'info');
     const batchSize = 5;
+    let loaded = 0;
+    let errors = 0;
     for (let i = 0; i < subscriptions.length; i += batchSize) {
       const batch = subscriptions.slice(i, i + batchSize);
       await Promise.all(batch.map(async (sub) => {
-        if (sub.latestVideo) return;
-        try {
-          const uploadsId = 'UU' + sub.channelId.substring(2);
-          const url = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${uploadsId}&maxResults=1&key=${CONFIG.apiKey}`;
-          const r = await fetch(url);
-          const data = await r.json();
-          if (data.items?.length) {
-            const v = data.items[0].snippet;
-            sub.latestVideo = {
-              videoId: v.resourceId.videoId,
-              title: v.title,
-              thumbnail: v.thumbnails?.medium?.url || v.thumbnails?.default?.url || '',
-              publishedAt: v.publishedAt,
-            };
-            updateChannelCard(sub);
+        if (sub.latestVideo) { loaded++; return; }
+        const uploadsId = 'UU' + sub.channelId.substring(2);
+        const url = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${uploadsId}&maxResults=1&key=${CONFIG.apiKey}`;
+        const data = await apiFetch(url);
+        if (data._error) {
+          errors++;
+          if (data.reason === 'quotaExceeded') {
+            logStatus(`Quota exceeded at ${loaded}/${subscriptions.length} channels — stopping`, 'error');
           }
-        } catch {}
+          return;
+        }
+        if (data.items?.length) {
+          const v = data.items[0].snippet;
+          sub.latestVideo = {
+            videoId: v.resourceId.videoId,
+            title: v.title,
+            thumbnail: v.thumbnails?.medium?.url || v.thumbnails?.default?.url || '',
+            publishedAt: v.publishedAt,
+          };
+          updateChannelCard(sub);
+        }
+        loaded++;
       }));
+      // Stop fetching if we hit quota
+      if (errors > 0) break;
       // Re-render to update sort order as videos load
       if (document.getElementById('sort-select').value !== 'alpha') {
         renderChannelList();
       }
+    }
+    // Cache latest videos
+    const videoMap = {};
+    for (const sub of subscriptions) {
+      if (sub.latestVideo) videoMap[sub.channelId] = sub.latestVideo;
+    }
+    localStorage.setItem('yt_latest_videos', JSON.stringify({ timestamp: Date.now(), videos: videoMap }));
+
+    if (errors === 0) {
+      logStatus(`Loaded latest videos for ${loaded} channels`, 'info');
+    } else {
+      logStatus(`Loaded ${loaded} of ${subscriptions.length} channels (${errors} errors)`, 'warn');
     }
   }
 
@@ -716,15 +919,23 @@
     document.getElementById('video-scroll').innerHTML = '<div class="loading">Loading videos...</div>';
     document.getElementById('now-playing-title').textContent = '';
     document.getElementById('now-playing-date').textContent = '';
-    document.getElementById('video-list-heading').textContent = `Recent Videos`;
+    videoTab = 'recent';
+    document.getElementById('tab-recent').classList.add('active');
+    document.getElementById('tab-related').classList.remove('active');
 
     try {
       currentChannelId = sub.channelId;
       videoOffset = 0;
 
       if (!videoCache[currentChannelId]) {
-        videoCache[currentChannelId] = { videos: [], nextPageToken: '' };
-        await fetchChannelVideos(currentChannelId);
+        const stored = loadChannelCache(currentChannelId);
+        if (stored) {
+          videoCache[currentChannelId] = stored;
+          logStatus(`Using cached videos for ${sub.title}`, 'info');
+        } else {
+          videoCache[currentChannelId] = { videos: [], nextPageToken: '' };
+          await fetchChannelVideos(currentChannelId);
+        }
       }
 
       currentVideos = videoCache[currentChannelId].videos;
@@ -743,8 +954,8 @@
     const cache = videoCache[channelId];
     const uploadsId = 'UU' + channelId.substring(2);
     const url = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${uploadsId}&maxResults=50&pageToken=${cache.nextPageToken}&key=${CONFIG.apiKey}`;
-    const r = await fetch(url);
-    const data = await r.json();
+    const data = await apiFetch(url);
+    if (data._error) return;
     const newVideos = (data.items || []).map(item => ({
       videoId: item.snippet.resourceId.videoId,
       title: item.snippet.title,
@@ -753,9 +964,126 @@
     }));
     cache.videos = cache.videos.concat(newVideos);
     cache.nextPageToken = data.nextPageToken || '';
+    saveChannelCache(channelId, cache);
+  }
+
+  function saveChannelCache(channelId, cache) {
+    try {
+      localStorage.setItem(`yt_channel_${channelId}`, JSON.stringify({
+        timestamp: Date.now(),
+        videos: cache.videos,
+        nextPageToken: cache.nextPageToken,
+      }));
+    } catch {} // localStorage full — not critical
+  }
+
+  function loadChannelCache(channelId) {
+    const stored = localStorage.getItem(`yt_channel_${channelId}`);
+    if (!stored) return null;
+    const { timestamp, videos, nextPageToken } = JSON.parse(stored);
+    if (Date.now() - timestamp > LATEST_VIDEOS_TTL) {
+      localStorage.removeItem(`yt_channel_${channelId}`);
+      return null;
+    }
+    return { videos, nextPageToken };
+  }
+
+  // Related videos
+  async function fetchRelatedVideos(videoId) {
+    if (!relatedCache[videoId]) {
+      const stored = loadRelatedCache(videoId);
+      if (stored) {
+        relatedCache[videoId] = stored;
+        logStatus(`Using cached related videos`, 'info');
+      } else {
+        relatedCache[videoId] = { videos: [], nextPageToken: '' };
+      }
+    }
+    const cache = relatedCache[videoId];
+    if (cache.videos.length > 0 && !cache.nextPageToken) return; // fully loaded, no more pages
+    if (cache.videos.length > 0 && cache.nextPageToken === '') return;
+
+    // Get current video title to use as search query
+    let query = '';
+    const channelVideos = videoCache[currentChannelId]?.videos || [];
+    const currentVid = channelVideos.find(v => v.videoId === videoId);
+    if (currentVid) {
+      query = currentVid.title;
+    } else {
+      query = document.getElementById('now-playing-title').textContent;
+    }
+    // Use first few meaningful words as search terms
+    query = query.replace(/[^\w\s]/g, ' ').split(/\s+/).filter(w => w.length > 2).slice(0, 4).join(' ');
+    if (!query) {
+      logStatus('No video title available for related search', 'warn');
+      return;
+    }
+
+    const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&type=video&maxResults=50&pageToken=${cache.nextPageToken}&key=${CONFIG.apiKey}`;
+    const data = await apiFetch(url);
+    if (data._error) return;
+    const newVideos = (data.items || []).filter(item => item.snippet && item.id.videoId !== videoId).map(item => ({
+      videoId: item.id.videoId,
+      title: item.snippet.title,
+      thumbnail: item.snippet.thumbnails?.medium?.url || item.snippet.thumbnails?.default?.url || '',
+      publishedAt: item.snippet.publishedAt,
+    }));
+    cache.videos = cache.videos.concat(newVideos);
+    cache.nextPageToken = data.nextPageToken || '';
+    saveRelatedCache(videoId, cache);
+  }
+
+  function saveRelatedCache(videoId, cache) {
+    try {
+      localStorage.setItem(`yt_related_${videoId}`, JSON.stringify({
+        timestamp: Date.now(),
+        videos: cache.videos,
+        nextPageToken: cache.nextPageToken,
+      }));
+    } catch {}
+  }
+
+  function loadRelatedCache(videoId) {
+    const stored = localStorage.getItem(`yt_related_${videoId}`);
+    if (!stored) return null;
+    const { timestamp, videos, nextPageToken } = JSON.parse(stored);
+    if (Date.now() - timestamp > LATEST_VIDEOS_TTL) {
+      localStorage.removeItem(`yt_related_${videoId}`);
+      return null;
+    }
+    return { videos, nextPageToken };
+  }
+
+  async function switchVideoTab(tab) {
+    videoTab = tab;
+    videoOffset = 0;
+    document.getElementById('tab-recent').classList.toggle('active', tab === 'recent');
+    document.getElementById('tab-related').classList.toggle('active', tab === 'related');
+
+    if (tab === 'recent') {
+      currentVideos = videoCache[currentChannelId]?.videos || [];
+      renderVideoPage();
+    } else {
+      const container = document.getElementById('video-scroll');
+      if (!relatedCache[currentVideoId]?.videos.length) {
+        container.innerHTML = '<div class="loading">Loading related videos...</div>';
+        await fetchRelatedVideos(currentVideoId);
+      }
+      currentVideos = relatedCache[currentVideoId]?.videos || [];
+      renderVideoPage();
+    }
   }
 
   function checkPrefetch() {
+    if (videoTab === 'related') {
+      const cache = relatedCache[currentVideoId];
+      if (cache && cache.nextPageToken && videoOffset + videosPerPage >= cache.videos.length - 10) {
+        fetchRelatedVideos(currentVideoId).then(() => {
+          currentVideos = cache.videos;
+        });
+      }
+      return;
+    }
     const cache = videoCache[currentChannelId];
     if (cache && cache.nextPageToken && videoOffset + videosPerPage >= cache.videos.length - 10) {
       fetchChannelVideos(currentChannelId).then(() => {
@@ -796,9 +1124,14 @@
     const card = document.getElementById(`video-${video.videoId}`);
     if (card) card.classList.add('active');
 
+    const prevVideoId = currentVideoId;
     currentVideoId = video.videoId;
     history.replaceState(null, '', `#channel=${currentChannelId}&video=${video.videoId}`);
     resetComments();
+    // If on related tab and video changed, refresh related list
+    if (videoTab === 'related' && prevVideoId !== video.videoId) {
+      switchVideoTab('related');
+    }
     document.getElementById('now-playing-title').textContent = video.title;
     document.getElementById('video-yt-link').href = `https://www.youtube.com/watch?v=${video.videoId}`;
     document.getElementById('now-playing-date').textContent = formatDate(video.publishedAt);
@@ -883,31 +1216,24 @@
 
   async function fetchComments(videoId) {
     const cache = commentCache[videoId];
-    try {
-      const url = `https://www.googleapis.com/youtube/v3/commentThreads?part=snippet&videoId=${videoId}&maxResults=50&order=relevance&pageToken=${cache.nextPageToken}&key=${CONFIG.apiKey}`;
-      const r = await fetch(url);
-      const data = await r.json();
-
-      if (data.error) {
-        cache.disabled = true;
-        return;
-      }
-
-      const newComments = (data.items || []).map(item => {
-        const c = item.snippet.topLevelComment.snippet;
-        return {
-          author: c.authorDisplayName,
-          avatar: c.authorProfileImageUrl,
-          text: c.textDisplay,
-          likes: c.likeCount,
-          publishedAt: c.publishedAt,
-        };
-      });
-      cache.comments = cache.comments.concat(newComments);
-      cache.nextPageToken = data.nextPageToken || '';
-    } catch {
+    const url = `https://www.googleapis.com/youtube/v3/commentThreads?part=snippet&videoId=${videoId}&maxResults=50&order=relevance&pageToken=${cache.nextPageToken}&key=${CONFIG.apiKey}`;
+    const data = await apiFetch(url);
+    if (data._error) {
       cache.disabled = true;
+      return;
     }
+    const newComments = (data.items || []).map(item => {
+      const c = item.snippet.topLevelComment.snippet;
+      return {
+        author: c.authorDisplayName,
+        avatar: c.authorProfileImageUrl,
+        text: c.textDisplay,
+        likes: c.likeCount,
+        publishedAt: c.publishedAt,
+      };
+    });
+    cache.comments = cache.comments.concat(newComments);
+    cache.nextPageToken = data.nextPageToken || '';
   }
 
   function renderComments() {
@@ -1000,19 +1326,16 @@
     let sub = subscriptions.find(s => s.channelId === channelId);
     if (!sub) {
       // Channel not in subscriptions — fetch channel info
-      try {
-        const url = `https://www.googleapis.com/youtube/v3/channels?part=snippet&id=${channelId}&key=${CONFIG.apiKey}`;
-        const r = await fetch(url);
-        const data = await r.json();
-        if (data.items?.length) {
-          const ch = data.items[0].snippet;
-          sub = {
-            channelId: channelId,
-            title: ch.title,
-            avatar: ch.thumbnails?.default?.url || '',
-          };
-        }
-      } catch {}
+      const url = `https://www.googleapis.com/youtube/v3/channels?part=snippet&id=${channelId}&key=${CONFIG.apiKey}`;
+      const data = await apiFetch(url);
+      if (!data._error && data.items?.length) {
+        const ch = data.items[0].snippet;
+        sub = {
+          channelId: channelId,
+          title: ch.title,
+          avatar: ch.thumbnails?.default?.url || '',
+        };
+      }
     }
     if (sub) showChannel(sub, videoId || undefined);
   }
@@ -1049,24 +1372,22 @@
   }
 
   async function openVideoByUrl(videoId) {
-    try {
-      const url = `https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${videoId}&key=${CONFIG.apiKey}`;
-      const r = await fetch(url);
-      const data = await r.json();
-      if (data.items?.length) {
-        const snippet = data.items[0].snippet;
-        const channelId = snippet.channelId;
-        let sub = subscriptions.find(s => s.channelId === channelId);
-        if (!sub) {
-          sub = {
-            channelId: channelId,
-            title: snippet.channelTitle,
-            avatar: '',
-          };
-        }
-        showChannel(sub, videoId);
+    const url = `https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${videoId}&key=${CONFIG.apiKey}`;
+    const data = await apiFetch(url);
+    if (data._error) return;
+    if (data.items?.length) {
+      const snippet = data.items[0].snippet;
+      const channelId = snippet.channelId;
+      let sub = subscriptions.find(s => s.channelId === channelId);
+      if (!sub) {
+        sub = {
+          channelId: channelId,
+          title: snippet.channelTitle,
+          avatar: '',
+        };
       }
-    } catch {}
+      showChannel(sub, videoId);
+    }
   }
 
   // Search filtering
@@ -1118,11 +1439,145 @@
     });
   }
 
+  // Status console
+  let statusErrors = 0;
+  let statusWarnings = 0;
+  let statusCount = 0;
+
+  // Quota tracking
+  const QUOTA_COSTS = { search: 100, subscriptions: 1, playlistItems: 1, videos: 1, channels: 1, commentThreads: 1 };
+  let quotaUsed = parseInt(localStorage.getItem('yt_quota_used') || '0');
+  let quotaResetDate = localStorage.getItem('yt_quota_reset') || '';
+  const QUOTA_LIMIT = 10000;
+
+  function checkQuotaReset() {
+    // Quota resets at midnight Pacific Time
+    const now = new Date();
+    const pacific = now.toLocaleDateString('en-US', { timeZone: 'America/Los_Angeles' });
+    if (quotaResetDate !== pacific) {
+      quotaUsed = 0;
+      quotaResetDate = pacific;
+      localStorage.setItem('yt_quota_reset', pacific);
+      localStorage.setItem('yt_quota_used', '0');
+      updateQuotaWarning();
+    }
+  }
+
+  function trackQuota(endpoint) {
+    checkQuotaReset();
+    const cost = QUOTA_COSTS[endpoint] || 1;
+    const prevThousand = Math.floor(quotaUsed / 1000);
+    quotaUsed += cost;
+    const newThousand = Math.floor(quotaUsed / 1000);
+    localStorage.setItem('yt_quota_used', String(quotaUsed));
+
+    if (newThousand > prevThousand) {
+      logStatus(`Quota: ~${quotaUsed.toLocaleString()} / ${QUOTA_LIMIT.toLocaleString()} units used today`, 'warn');
+    }
+    updateQuotaWarning();
+  }
+
+  function updateQuotaWarning() {
+    const el = document.getElementById('quota-warning');
+    if (quotaUsed >= 8000) {
+      el.style.display = '';
+      el.textContent = `Quota: ~${quotaUsed.toLocaleString()} / ${QUOTA_LIMIT.toLocaleString()}`;
+    } else {
+      el.style.display = 'none';
+    }
+  }
+
+  // Show warning on load if already high
+  checkQuotaReset();
+  updateQuotaWarning();
+
+  function logStatus(msg, level = 'info') {
+    statusCount++;
+    if (level === 'error') statusErrors++;
+    if (level === 'warn') statusWarnings++;
+
+    const log = document.getElementById('status-log');
+    const entry = document.createElement('div');
+    entry.className = `status-entry ${level}`;
+    const ts = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    entry.innerHTML = `<span class="ts">${ts}</span>${msg}`;
+    log.appendChild(entry);
+    log.scrollTop = log.scrollHeight;
+
+    updateStatusBadge();
+  }
+
+  function updateStatusBadge() {
+    const dot = document.getElementById('status-dot');
+    const badge = document.getElementById('status-badge');
+    dot.classList.toggle('has-errors', statusErrors > 0);
+    dot.classList.toggle('has-warnings', statusErrors === 0 && statusWarnings > 0);
+    badge.textContent = statusErrors > 0 ? statusErrors : statusCount;
+  }
+
+  function toggleStatusPanel() {
+    document.getElementById('status-panel').classList.toggle('open');
+  }
+
+  function clearStatusLog() {
+    document.getElementById('status-log').innerHTML = '';
+    statusErrors = 0;
+    statusWarnings = 0;
+    statusCount = 0;
+    updateStatusBadge();
+  }
+
+  async function apiFetch(url, options = {}) {
+    const endpoint = url.match(/\/youtube\/v3\/(\w+)/)?.[1] || 'api';
+    trackQuota(endpoint);
+    try {
+      const r = await fetch(url, options);
+      if (!r.ok) {
+        const data = await r.json().catch(() => ({}));
+        const reason = data.error?.errors?.[0]?.reason || r.statusText;
+        const msg = data.error?.message || `HTTP ${r.status}`;
+        if (r.status === 403 && reason === 'quotaExceeded') {
+          logStatus(`${endpoint}: quota exceeded — daily limit hit`, 'error');
+        } else if (r.status === 403) {
+          logStatus(`${endpoint}: forbidden — ${msg}`, 'error');
+        } else if (r.status === 401) {
+          logStatus(`${endpoint}: auth expired`, 'warn');
+        } else {
+          logStatus(`${endpoint}: ${msg} (${r.status})`, 'error');
+        }
+        return { _error: true, status: r.status, reason, data };
+      }
+      const data = await r.json();
+      if (data.error) {
+        logStatus(`${endpoint}: ${data.error.message}`, 'error');
+        return { _error: true, data };
+      }
+      return data;
+    } catch (e) {
+      logStatus(`${endpoint}: ${e.message}`, 'error');
+      return { _error: true, reason: 'network', message: e.message };
+    }
+  }
+
   // Load YouTube IFrame API
   const ytScript = document.createElement('script');
   ytScript.src = 'https://www.youtube.com/iframe_api';
   document.head.appendChild(ytScript);
 </script>
+
+<div id="status-console">
+  <div id="status-panel">
+    <div id="status-panel-header">
+      <span>API Console</span>
+      <button id="status-clear" onclick="clearStatusLog()">Clear</button>
+    </div>
+    <div id="status-log"></div>
+  </div>
+  <button id="status-toggle" onclick="toggleStatusPanel()">
+    <span class="dot" id="status-dot"></span>
+    <span id="status-badge">0</span>
+  </button>
+</div>
 
 <!-- Google Identity Services -->
 <script src="https://accounts.google.com/gsi/client" onload="initGIS()"></script>
