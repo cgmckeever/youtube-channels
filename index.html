@@ -820,9 +820,11 @@
         const url = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${uploadsId}&maxResults=1&key=${CONFIG.apiKey}`;
         const data = await apiFetch(url);
         if (data._error) {
-          errors++;
           if (data.reason === 'quotaExceeded') {
             logStatus(`Quota exceeded at ${loaded}/${subscriptions.length} channels — stopping`, 'error');
+            errors = -1; // signal to stop
+          } else {
+            errors++;
           }
           return;
         }
@@ -839,7 +841,7 @@
         loaded++;
       }));
       // Stop fetching if we hit quota
-      if (errors > 0) break;
+      if (errors < 0) break;
       // Re-render to update sort order as videos load
       if (document.getElementById('sort-select').value !== 'alpha') {
         renderChannelList();
@@ -852,10 +854,12 @@
     }
     localStorage.setItem('yt_latest_videos', JSON.stringify({ timestamp: Date.now(), videos: videoMap }));
 
-    if (errors === 0) {
-      logStatus(`Loaded latest videos for ${loaded} channels`, 'info');
+    if (errors < 0) {
+      logStatus(`Quota exceeded — loaded ${loaded} of ${subscriptions.length} channels`, 'error');
+    } else if (errors > 0) {
+      logStatus(`Loaded ${loaded} of ${subscriptions.length} channels (${errors} skipped)`, 'info');
     } else {
-      logStatus(`Loaded ${loaded} of ${subscriptions.length} channels (${errors} errors)`, 'warn');
+      logStatus(`Loaded latest videos for ${loaded} channels`, 'info');
     }
   }
 
@@ -954,8 +958,9 @@
     document.getElementById('back-btn').style.display = '';
     document.getElementById('header-title').textContent = sub.title;
     document.getElementById('video-scroll').innerHTML = '<div class="loading">Loading videos...</div>';
-    document.getElementById('now-playing-title').textContent = '';
+    document.getElementById('now-playing-title').textContent = sub.title;
     document.getElementById('now-playing-date').textContent = '';
+    document.getElementById('video-yt-link').href = `https://www.youtube.com/channel/${sub.channelId}`;
     videoTab = 'recent';
     document.getElementById('tab-recent').classList.add('active');
     document.getElementById('tab-related').classList.remove('active');
@@ -1623,6 +1628,8 @@
           logStatus(`${endpoint}: forbidden — ${msg}`, 'error');
         } else if (r.status === 401) {
           logStatus(`${endpoint}: auth expired`, 'warn');
+        } else if (r.status === 404) {
+          // Dead/deleted channels — don't spam the console
         } else {
           logStatus(`${endpoint}: ${msg} (${r.status})`, 'error');
         }
