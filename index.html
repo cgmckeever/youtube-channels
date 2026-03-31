@@ -1071,8 +1071,10 @@
 
   // Search filtering
   let searchTimeout;
+  let pasteHandled = false;
 
   document.getElementById('search-box').addEventListener('paste', (e) => {
+    pasteHandled = true;
     setTimeout(() => {
       const val = document.getElementById('search-box').value.trim();
       const videoId = parseYouTubeUrl(val);
@@ -1080,10 +1082,12 @@
         document.getElementById('search-box').value = '';
         openVideoByUrl(videoId);
       }
+      pasteHandled = false;
     }, 0);
   });
 
   document.getElementById('search-box').addEventListener('input', () => {
+    if (pasteHandled) return;
     clearTimeout(searchTimeout);
     searchTimeout = setTimeout(() => {
       if (document.getElementById('channel-detail').style.display === 'block') {
