@@ -181,18 +181,51 @@
       height: 100%;
     }
 
-    #now-playing-title {
+    #now-playing-info {
       max-width: 900px;
       margin: 12px auto 0;
       padding: 0 24px;
-      font-size: 16px;
-      font-weight: 500;
     }
 
+    .now-playing-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    #now-playing-title {
+      font-size: 16px;
+      font-weight: 500;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .video-link {
+      color: #3ea6ff;
+      text-decoration: none;
+      font-size: 12px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .video-link:hover { text-decoration: underline; }
+
+    .copy-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px;
+      flex-shrink: 0;
+      color: #aaa;
+      font-size: 16px;
+    }
+
+    .copy-btn:hover { color: #f1f1f1; }
+
+    .copy-btn.copied { color: #4caf50; }
+
     #now-playing-date {
-      max-width: 900px;
-      margin: 4px auto 0;
-      padding: 0 24px;
+      margin-top: 4px;
       font-size: 13px;
       color: #aaa;
     }
@@ -412,8 +445,14 @@
       <div id="player"></div>
     </div>
   </div>
-  <div id="now-playing-title"></div>
-  <div id="now-playing-date"></div>
+  <div id="now-playing-info">
+    <div class="now-playing-row">
+      <div id="now-playing-title"></div>
+      <a id="video-yt-link" class="video-link" href="#" target="_blank">YouTube</a>
+      <button class="copy-btn" id="copy-url-btn" onclick="copyVideoUrl()" title="Copy YouTube URL">&#128203;</button>
+    </div>
+    <div id="now-playing-date"></div>
+  </div>
   <div id="video-list-container">
     <div class="scroll-controls">
       <button class="scroll-btn" onclick="scrollVideos(-1)">&larr;</button>
@@ -761,6 +800,7 @@
     history.replaceState(null, '', `#channel=${currentChannelId}&video=${video.videoId}`);
     resetComments();
     document.getElementById('now-playing-title').textContent = video.title;
+    document.getElementById('video-yt-link').href = `https://www.youtube.com/watch?v=${video.videoId}`;
     document.getElementById('now-playing-date').textContent = formatDate(video.publishedAt);
 
     if (ytPlayer && ytPlayer.loadVideoById) {
@@ -788,6 +828,19 @@
         },
       });
     }
+  }
+
+  function copyVideoUrl() {
+    const url = `https://www.youtube.com/watch?v=${currentVideoId}`;
+    navigator.clipboard.writeText(url).then(() => {
+      const btn = document.getElementById('copy-url-btn');
+      btn.classList.add('copied');
+      btn.textContent = '\u2713';
+      setTimeout(() => {
+        btn.classList.remove('copied');
+        btn.textContent = '\u{1F4CB}';
+      }, 1500);
+    });
   }
 
   function showEmbedError(videoId) {
